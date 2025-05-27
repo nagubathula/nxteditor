@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Transcript Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="font-sans bg-gradient-to-br from-indigo-500 via-purple-600 to-purple-700 min-h-screen text-gray-800"
+  >
+    <div class="w-[90%] max-w-7xl mx-auto px-4 py-6">
+      <header class="text-center mb-8 text-white">
+        <h1 class="text-4xl font-bold mb-2 drop-shadow-md">
+          🎬 Video Transcript Editor
+        </h1>
+        <p class="text-lg opacity-90">
+          Upload, transcribe, edit, and export your video content with subtitles
+        </p>
+      </header>
+
+      <main
+        class="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4 min-h-[calc(100vh-200px)]"
+      >
+        <div
+          class="bg-white/95 rounded-2xl p-6 backdrop-blur-lg shadow-2xl overflow-y-auto"
+        >
+          <div
+            class="mb-6 p-5 bg-gradient-to-r from-pink-400 to-red-400 rounded-lg text-white"
+          >
+            <h3 class="text-xl font-semibold mb-4">📁 Upload Content</h3>
+            <div class="flex flex-wrap gap-2">
+              <label class="relative inline-block cursor-pointer">
+                <input
+                  type="file"
+                  id="videoInput"
+                  class="absolute opacity-0 w-full h-full cursor-pointer"
+                  accept="video/*"
+                />
+                <span
+                  class="inline-block px-5 py-2.5 bg-white/20 border-2 border-white/30 rounded-lg text-white font-medium text-sm hover:bg-white/30 transition-transform hover:-translate-y-0.5"
+                  >Choose Video File</span
+                >
+              </label>
+              <label class="relative inline-block cursor-pointer">
+                <input
+                  type="file"
+                  id="csvInput"
+                  class="absolute opacity-0 w-full h-full cursor-pointer"
+                  accept=".csv"
+                />
+                <span
+                  class="inline-block px-5 py-2.5 bg-white/20 border-2 border-white/30 rounded-lg text-white font-medium text-sm hover:bg-white/30 transition-transform hover:-translate-y-0.5"
+                  >Upload CSV</span
+                >
+              </label>
+            </div>
+            <div
+              id="uploadProgress"
+              class="w-full h-2 bg-white/30 rounded-full overflow-hidden mt-2 hidden"
+            >
+              <div
+                id="progressFill"
+                class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 w-0 transition-[width] duration-300"
+              ></div>
+            </div>
+            <div id="statusMessage"></div>
+          </div>
+
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-4">🎮 Controls</h3>
+            <div class="flex flex-wrap gap-2">
+              <button
+                id="playPauseBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-blue-400 to-cyan-400 text-white rounded-lg font-medium text-sm hover:-translate-y-0.5 shadow-md transition-transform"
+              >
+                ▶️ Play/Pause
+              </button>
+              <button
+                id="exportBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-green-400 to-teal-400 text-white rounded-lg font-medium text-sm hover:-translate-y-0.5 shadow-md transition-transform"
+              >
+                📥 Export Video
+              </button>
+              <button
+                id="downloadTranscriptBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-green-400 to-teal-400 text-white rounded-lg font-medium text-sm hover:-translate-y-0.5 shadow-md transition-transform"
+              >
+                💾 Download CSV
+              </button>
+              <button
+                id="undoBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-pink-400 to-yellow-400 text-white rounded-lg font-medium text-sm hover:-translate-y-0.5 shadow-md transition-transform"
+              >
+                ↶ Undo
+              </button>
+              <button
+                id="redoBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-pink-400 to-yellow-400 text-white rounded-lg font-medium text-sm hover:-translate-y-0.5 shadow-md transition-transform"
+              >
+                ↷ Redo
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">📝 Transcript</h3>
+            <div class="max-h-[500px] overflow-y-auto">
+              <table
+                id="transcriptTable"
+                class="w-full border-collapse bg-white rounded-lg shadow-md"
+              >
+                <thead>
+                  <tr
+                    class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
+                  >
+                    <th class="p-3 text-left font-semibold">Start (s)</th>
+                    <th class="p-3 text-left font-semibold">End (s)</th>
+                    <th class="p-3 text-left font-semibold">Text</th>
+                    <th class="p-3 text-left font-semibold">Available</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-rows-[2fr_1fr] gap-5">
+          <div class="bg-white/95 rounded-2xl p-5 backdrop-blur-lg shadow-2xl">
+            <h3 class="text-xl font-semibold mb-4">🎥 Video Player</h3>
+            <video
+              id="videoPlayer"
+              class="w-full h-[400px] bg-black rounded-lg hidden"
+              controls
+            >
+              Your browser does not support the video tag.
+            </video>
+            <div
+              id="videoPlaceholder"
+              class="flex items-center justify-center h-[400px] bg-gray-100 rounded-lg text-gray-600"
+            >
+              Upload a video to start
+            </div>
+          </div>
+
+          <div class="bg-white/95 rounded-2xl p-5 backdrop-blur-lg shadow-2xl">
+            <h3 class="text-xl font-semibold mb-4">⏱️ Timeline Editor</h3>
+            <div
+              id="timelineEditor"
+              class="h-[200px] border-2 border-gray-300 rounded-lg bg-gray-50 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px)] bg-[length:20px_100%] overflow-x-auto cursor-crosshair relative"
+            >
+              <div
+                class="flex items-center justify-center h-full text-gray-600"
+              >
+                Load a transcript to see the timeline
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const PROJECT_ID = "{{ project_id or '' }}";
+      class VideoTranscriptApp {
+        constructor() {
+          this.currentId = PROJECT_ID || null;
+          this.transcript = [];
+          this.videoUrl = null;
+          this.undoStack = [];
+          this.redoStack = [];
+          this.currentHighlight = null;
+          this.timeline = null;
+
+          this.initializeEventListeners();
+          this.initializeTimeline();
+
+          // Load everything if ID is present in URL
+          if (this.currentId) {
+            this.fetchTranscript();
+            this.loadVideo();
+          }
+        }
+
+        initializeEventListeners() {
+          document
+            .getElementById("videoInput")
+            .addEventListener("change", (e) => this.handleVideoUpload(e));
+          document
+            .getElementById("csvInput")
+            .addEventListener("change", (e) => this.handleCsvUpload(e));
+          document
+            .getElementById("playPauseBtn")
+            .addEventListener("click", () => this.togglePlayPause());
+          document
+            .getElementById("exportBtn")
+            .addEventListener("click", () => this.exportVideo());
+
+          document
+            .getElementById("undoBtn")
+            .addEventListener("click", () => this.undo());
+          document
+            .getElementById("redoBtn")
+            .addEventListener("click", () => this.redo());
+
+          const videoPlayer = document.getElementById("videoPlayer");
+          videoPlayer.addEventListener("timeupdate", () =>
+            this.updateHighlight()
+          );
+        }
+
+        showStatus(message, type = "info") {
+          const statusDiv = document.getElementById("statusMessage");
+          statusDiv.innerHTML = `<div class="p-3 rounded-lg font-medium border flex items-center gap-2 ${
+            type === "success"
+              ? "bg-green-100 text-green-800 border-green-300"
+              : type === "error"
+              ? "bg-red-100 text-red-800 border-red-300"
+              : "bg-blue-100 text-blue-800 border-blue-300"
+          }">${
+            type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️"
+          } ${message}</div>`;
+          setTimeout(() => (statusDiv.innerHTML = ""), 5000);
+        }
+
+        showProgress(progress) {
+          const progressBar = document.getElementById("uploadProgress");
+          const progressFill = document.getElementById("progressFill");
+          progressBar.style.display = "block";
+          progressFill.style.width = progress + "%";
+
+          if (progress >= 100) {
+            setTimeout(() => (progressBar.style.display = "none"), 2000);
+          }
+        }
+
+        async handleVideoUpload(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append("video", file);
+
+          try {
+            this.showStatus("Uploading video...", "info");
+            const response = await fetch("/upload_video", {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await response.json();
+            if (result.success) {
+              window.location.href = `/project/${result.id}`; // ✅ Redirect
+            } else {
+              this.showStatus(result.error, "error");
+            }
+          } catch (error) {
+            this.showStatus("Upload failed: " + error.message, "error");
+          }
+        }
+
+        async checkTranscriptionStatus() {
+          if (!this.currentId) return;
+
+          try {
+            const response = await fetch(`/get_status/${this.currentId}`);
+            const status = await response.json();
+
+            if (
+              status.status === "processing" ||
+              status.status === "transcribing"
+            ) {
+              this.showProgress(status.progress);
+              this.showStatus(`Transcribing... ${status.progress}%`, "info");
+              setTimeout(() => this.checkTranscriptionStatus(), 2000);
+            } else if (status.status === "completed") {
+              this.showProgress(100);
+              this.showStatus("Transcription completed!", "success");
+              this.transcript = status.transcript;
+              this.loadTranscript();
+              this.loadVideo();
+            } else if (status.status === "error") {
+              this.showStatus("Transcription failed: " + status.error, "error");
+            }
+          } catch (error) {
+            this.showStatus("Status check failed: " + error.message, "error");
+          }
+        }
+
+        async handleCsvUpload(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append("csv", file);
+
+          try {
+            this.showStatus("Uploading CSV...", "info");
+            const response = await fetch("/upload_csv", {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await response.json();
+            if (result.success) {
+              window.location.href = `/project/${result.id}`; // ✅ Redirect
+            } else {
+              this.showStatus(result.error, "error");
+            }
+          } catch (error) {
+            this.showStatus("CSV upload failed: " + error.message, "error");
+          }
+        }
+
+        loadTranscript() {
+          const tbody = document.querySelector("#transcriptTable tbody");
+          tbody.innerHTML = "";
+
+          this.transcript.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.dataset.index = index;
+            tr.className =
+              "hover:bg-indigo-50 transition-colors odd:bg-gray-50";
+
+            tr.innerHTML = `
+                        <td class="p-3"><input type="number" class="w-24 p-1 border border-gray-300 rounded focus:border-indigo-500 focus:outline-none text-sm" value="${row.start.toFixed(
+                          2
+                        )}" step="0.01" onchange="app.updateTranscript(${index}, 'start', this.value)"></td>
+                        <td class="p-3"><input type="number" class="w-24 p-1 border border-gray-300 rounded focus:border-indigo-500 focus:outline-none text-sm" value="${row.end.toFixed(
+                          2
+                        )}" step="0.01" onchange="app.updateTranscript(${index}, 'end', this.value)"></td>
+                        <td class="p-3 max-w-xs break-words">
+                            <textarea class="w-full min-h-[60px] p-2 border-2 border-gray-300 rounded focus:border-indigo-500 focus:outline-none resize-y text-sm" onchange="app.updateTranscript(${index}, 'text', this.value)" onkeydown="app.handleTextKeydown(event, ${index})">${
+              row.text
+            }</textarea>
+                        </td>
+                        <td class="p-3"><input type="checkbox" class="h-5 w-5" ${
+                          row.hostvideoavailable ? "checked" : ""
+                        } onchange="app.updateTranscript(${index}, 'hostvideoavailable', this.checked)"></td>
+                    `;
+
+            tbody.appendChild(tr);
+          });
+
+          this.updateTimeline();
+        }
+
+        updateTranscript(index, field, value) {
+          this.pushUndo();
+
+          if (field === "start" || field === "end") {
+            value = parseFloat(value);
+          } else if (field === "hostvideoavailable") {
+            value = Boolean(value);
+          }
+
+          this.transcript[index][field] = value;
+          this.saveTranscript();
+          this.updateTimeline();
+        }
+
+        handleTextKeydown(event, index) {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            this.splitSegment(index, event.target);
+          }
+        }
+
+        splitSegment(index, textarea) {
+          const text = textarea.value;
+          const cursorPos = textarea.selectionStart;
+          const beforeCursor = text.substring(0, cursorPos);
+          const afterCursor = text.substring(cursorPos);
+
+          if (beforeCursor.trim() === "" || afterCursor.trim() === "") return;
+
+          this.pushUndo();
+
+          const originalSegment = this.transcript[index];
+          const totalLen = text.length;
+          const splitRatio = beforeCursor.length / totalLen;
+          const splitTime =
+            originalSegment.start +
+            (originalSegment.end - originalSegment.start) * splitRatio;
+
+          this.transcript[index] = {
+            ...originalSegment,
+            end: splitTime,
+            text: beforeCursor.trim(),
+          };
+
+          const newSegment = {
+            start: splitTime,
+            end: originalSegment.end,
+            text: afterCursor.trim(),
+            hostvideoavailable: originalSegment.hostvideoavailable,
+          };
+
+          this.transcript.splice(index + 1, 0, newSegment);
+          this.loadTranscript();
+          this.saveTranscript();
+        }
+
+        async saveTranscript() {
+          if (!this.currentId) return;
+
+          try {
+            await fetch("/update_transcript", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                id: this.currentId,
+                transcript: this.transcript,
+              }),
+            });
+          } catch (error) {
+            console.error("Failed to save transcript:", error);
+          }
+        }
+        async fetchTranscript() {
+            try {
+              const response = await fetch(`/get_transcript/${this.currentId}`);
+              const result = await response.json();
+              if (result.success) {
+                this.transcript = result.transcript;
+                this.loadTranscript();
+                this.initializeUndoRedo();
+              } else {
+                this.showStatus("Transcript not found", "error");
+              }
+            } catch (error) {
+              this.showStatus("Failed to load transcript: " + error.message, "error");
+            }
+          }
+          
+
+        async loadVideo() {
+          if (!this.currentId) return;
+
+          const videoPlayer = document.getElementById("videoPlayer");
+          const videoPlaceholder = document.getElementById("videoPlaceholder");
+
+          try {
+            const newSrc = `/get_video/${this.currentId}?t=${Date.now()}`; // prevent caching
+            videoPlayer.pause();
+            videoPlayer.src = newSrc;
+            videoPlayer.load();
+            videoPlayer.style.display = "block";
+            videoPlaceholder.style.display = "none";
+          } catch (error) {
+            this.showStatus("Failed to load video: " + error.message, "error");
+          }
+        }
+
+        togglePlayPause() {
+          const videoPlayer = document.getElementById("videoPlayer");
+          if (videoPlayer.paused) {
+            videoPlayer.play();
+          } else {
+            videoPlayer.pause();
+          }
+        }
+
+        updateHighlight() {
+          const videoPlayer = document.getElementById("videoPlayer");
+          const currentTime = videoPlayer.currentTime;
+
+          let highlightIndex = null;
+          for (let i = 0; i < this.transcript.length; i++) {
+            const segment = this.transcript[i];
+            if (currentTime >= segment.start && currentTime < segment.end) {
+              highlightIndex = i;
+              break;
+            }
+          }
+
+          if (highlightIndex !== this.currentHighlight) {
+            if (this.currentHighlight !== null) {
+              const prevRow = document.querySelector(
+                `tr[data-index="${this.currentHighlight}"]`
+              );
+              if (prevRow)
+                prevRow.classList.remove(
+                  "bg-yellow-200",
+                  "shadow-[inset_3px_0_0_#ffc107]"
+                );
+            }
+
+            if (highlightIndex !== null) {
+              const currentRow = document.querySelector(
+                `tr[data-index="${highlightIndex}"]`
+              );
+              if (currentRow) {
+                currentRow.classList.add(
+                  "bg-yellow-200",
+                  "shadow-[inset_3px_0_0_#ffc107]"
+                );
+                currentRow.scrollIntoView({
+                  behavior: "smooth",
+                  block: "nearest",
+                });
+              }
+            }
+
+            this.currentHighlight = highlightIndex;
+          }
+        }
+
+        async exportVideo() {
+          if (!this.currentId) {
+            this.showStatus("No video loaded", "error");
+            return;
+          }
+
+          try {
+            this.showStatus("Starting video export...", "info");
+            const response = await fetch("/export_video", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ id: this.currentId }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+              this.checkExportStatus(result.export_id);
+            } else {
+              this.showStatus(result.error, "error");
+            }
+          } catch (error) {
+            this.showStatus("Export failed: " + error.message, "error");
+          }
+        }
+
+        async checkExportStatus(exportId) {
+          try {
+            const response = await fetch(`/get_status/${exportId}`);
+            const status = await response.json();
+
+            if (status.status === "exporting") {
+              this.showProgress(status.progress);
+              this.showStatus(`Exporting video... ${status.progress}%`, "info");
+              setTimeout(() => this.checkExportStatus(exportId), 2000);
+            } else if (status.status === "completed") {
+              this.showProgress(100);
+              this.showStatus(
+                "Export completed! Starting download...",
+                "success"
+              );
+
+              const link = document.createElement("a");
+              link.href = `/download_export/${exportId}`;
+              link.download = `youtube_short_${exportId}.mp4`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            } else if (status.status === "error") {
+              this.showStatus("Export failed: " + status.error, "error");
+            }
+          } catch (error) {
+            this.showStatus(
+              "Export status check failed: " + error.message,
+              "error"
+            );
+          }
+        }
+
+        initializeUndoRedo() {
+          this.undoStack = [];
+          this.redoStack = [];
+        }
+
+        pushUndo() {
+          this.undoStack.push(JSON.parse(JSON.stringify(this.transcript)));
+          this.redoStack = [];
+
+          if (this.undoStack.length > 50) {
+            this.undoStack.shift();
+          }
+        }
+
+        undo() {
+          if (this.undoStack.length === 0) {
+            this.showStatus("Nothing to undo", "info");
+            return;
+          }
+
+          this.redoStack.push(JSON.parse(JSON.stringify(this.transcript)));
+          this.transcript = this.undoStack.pop();
+          this.loadTranscript();
+          this.saveTranscript();
+          this.showStatus("Undone", "success");
+        }
+
+        redo() {
+          if (this.redoStack.length === 0) {
+            this.showStatus("Nothing to redo", "info");
+            return;
+          }
+
+          this.undoStack.push(JSON.parse(JSON.stringify(this.transcript)));
+          this.transcript = this.redoStack.pop();
+          this.loadTranscript();
+          this.saveTranscript();
+          this.showStatus("Redone", "success");
+        }
+
+        initializeTimeline() {
+          const timeline = document.getElementById("timelineEditor");
+          this.timeline = new TimelineEditor(timeline, this);
+        }
+
+        updateTimeline() {
+          if (this.timeline) {
+            this.timeline.render(this.transcript);
+          }
+        }
+      }
+
+      class TimelineEditor {
+        constructor(container, app) {
+          this.container = container;
+          this.app = app;
+          this.zoom = 1.0;
+          this.dragging = null;
+          this.dragOffset = 0;
+
+          this.setupEventListeners();
+        }
+
+        setupEventListeners() {
+          this.container.addEventListener("mousedown", (e) =>
+            this.onMouseDown(e)
+          );
+          this.container.addEventListener("mousemove", (e) =>
+            this.onMouseMove(e)
+          );
+          this.container.addEventListener("mouseup", (e) => this.onMouseUp(e));
+          this.container.addEventListener("wheel", (e) => this.onWheel(e));
+        }
+
+        render(transcript) {
+          if (!transcript || transcript.length === 0) {
+            this.container.innerHTML =
+              '<div class="flex items-center justify-center h-full text-gray-600">Load a transcript to see the timeline</div>';
+            return;
+          }
+
+          const maxTime = Math.max(...transcript.map((t) => t.end));
+          const width = this.container.clientWidth * this.zoom;
+
+          this.container.innerHTML = "";
+
+          transcript.forEach((segment, index) => {
+            const segmentDiv = document.createElement("div");
+            segmentDiv.className =
+              "absolute h-12 top-1/2 -translate-y-1/2 border-2 border-gray-700 rounded flex items-center justify-center text-xs text-gray-800 cursor-move transition-transform hover:scale-105 hover:z-10";
+            segmentDiv.dataset.index = index;
+
+            const startX = (segment.start / maxTime) * width;
+            const endX = (segment.end / maxTime) * width;
+            const segmentWidth = endX - startX;
+
+            segmentDiv.style.left = startX + "px";
+            segmentDiv.style.width = segmentWidth + "px";
+            segmentDiv.style.backgroundColor =
+              index % 2 === 0
+                ? "rgba(179, 230, 255, 0.8)"
+                : "rgba(255, 217, 179, 0.8)";
+
+            segmentDiv.textContent =
+              segment.text.substring(0, 30) +
+              (segment.text.length > 30 ? "..." : "");
+            segmentDiv.title = `${segment.start.toFixed(
+              2
+            )}s - ${segment.end.toFixed(2)}s: ${segment.text}`;
+
+            this.container.appendChild(segmentDiv);
+          });
+
+          this.addTimeMarkers(maxTime, width);
+        }
+
+        addTimeMarkers(maxTime, width) {
+          const markerInterval = Math.ceil(maxTime / 10);
+          for (let time = 0; time <= maxTime; time += markerInterval) {
+            const marker = document.createElement("div");
+            marker.className =
+              "absolute left-0 top-0 w-px h-full bg-black/30 pointer-events-none";
+            marker.style.left = (time / maxTime) * width + "px";
+
+            const label = document.createElement("div");
+            label.className =
+              "absolute bottom-1 text-[10px] text-gray-600 pointer-events-none";
+            label.style.left = (time / maxTime) * width + "px";
+            label.textContent = time + "s";
+
+            this.container.appendChild(marker);
+            this.container.appendChild(label);
+          }
+        }
+
+        onMouseDown(e) {
+          const segment = e.target.closest(".timeline-segment");
+          if (segment) {
+            const index = parseInt(segment.dataset.index);
+            const rect = segment.getBoundingClientRect();
+            const relativeX = e.clientX - rect.left;
+
+            if (relativeX < 10) {
+              this.dragging = { index, type: "start" };
+            } else if (relativeX > rect.width - 10) {
+              this.dragging = { index, type: "end" };
+            } else {
+              const videoPlayer = document.getElementById("videoPlayer");
+              if (videoPlayer) {
+                videoPlayer.currentTime = this.app.transcript[index].start;
+              }
+            }
+
+            this.dragOffset = relativeX;
+            e.preventDefault();
+          }
+        }
+
+        onMouseMove(e) {
+          if (!this.dragging) return;
+
+          const rect = this.container.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const maxTime = Math.max(...this.app.transcript.map((t) => t.end));
+          const time = (x / (this.container.clientWidth * this.zoom)) * maxTime;
+
+          const { index, type } = this.dragging;
+          const segment = this.app.transcript[index];
+
+          if (type === "start") {
+            const minTime =
+              index > 0 ? this.app.transcript[index - 1].end + 0.01 : 0;
+            const maxTime = segment.end - 0.01;
+            const newTime = Math.max(minTime, Math.min(time, maxTime));
+            this.app.updateTranscript(index, "start", newTime);
+          } else if (type === "end") {
+            const minTime = segment.start + 0.01;
+            const maxTime =
+              index < this.app.transcript.length - 1
+                ? this.app.transcript[index + 1].start - 0.01
+                : Infinity;
+            const newTime = Math.max(minTime, Math.min(time, maxTime));
+            this.app.updateTranscript(index, "end", newTime);
+          }
+
+          this.render(this.app.transcript);
+        }
+
+        onMouseUp(e) {
+          this.dragging = null;
+        }
+
+        onWheel(e) {
+          e.preventDefault();
+          const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+          this.zoom = Math.max(0.5, Math.min(5.0, this.zoom * zoomFactor));
+          this.render(this.app.transcript);
+        }
+      }
+
+      const app = new VideoTranscriptApp();
+    </script>
+  </body>
+</html>
